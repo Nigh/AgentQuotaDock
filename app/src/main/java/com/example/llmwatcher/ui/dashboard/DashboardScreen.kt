@@ -1,32 +1,53 @@
 package com.example.llmwatcher.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.llmwatcher.model.PlatformUsage
 import com.example.llmwatcher.model.UsageIssue
+import com.example.llmwatcher.model.UsageLevel
 import com.example.llmwatcher.model.UsageMetric
 import com.example.llmwatcher.model.WatcherUiState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardScreen(
@@ -36,181 +57,239 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            DashboardHeader(
-                uiState = uiState,
+        val usages = uiState.usageSnapshot.platforms
+        if (usages.isEmpty()) {
+            EmptyDashboard(
                 onOpenSettings = onOpenSettings,
-                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
             )
-            PlatformUsageGrid(usages = uiState.usageSnapshot.platforms)
-        }
-    }
-}
-
-@Composable
-private fun DashboardHeader(
-    uiState: WatcherUiState,
-    onOpenSettings: () -> Unit,
-    onRefresh: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "LLM Watcher",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "横屏常亮看板 · ${uiState.usageSnapshot.generatedAtLabel}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        StatusPill(
-            label = if (uiState.isDimmed) "屏幕已调暗" else "屏幕高亮",
-            supportingText = "未变化 ${uiState.unchangedRefreshes} 次",
-        )
-        OutlinedButton(onClick = onRefresh) {
-            Text("立即刷新")
-        }
-        Button(onClick = onOpenSettings) {
-            Text("设置")
-        }
-    }
-}
-
-@Composable
-private fun StatusPill(
-    label: String,
-    supportingText: String,
-) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Text(text = label, style = MaterialTheme.typography.labelLarge)
-            Text(text = supportingText, style = MaterialTheme.typography.labelMedium)
-        }
-    }
-}
-
-@Composable
-private fun PlatformUsageGrid(usages: List<PlatformUsage>) {
-    if (usages.isEmpty()) {
-        EmptyDashboard()
-        return
-    }
-
-    usages.chunked(2).forEach { rowItems ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            rowItems.forEach { usage ->
-                PlatformUsageCard(
-                    usage = usage,
-                    modifier = Modifier.weight(1f),
+        } else {
+            val pagerState = rememberPagerState(pageCount = { usages.size })
+            Box(modifier = Modifier.fillMaxSize()) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                ) { page ->
+                    PlatformUsagePage(
+                        usage = usages[page],
+                        currentTime = rememberCurrentTimeText(),
+                        onRefresh = onRefresh,
+                        onOpenSettings = onOpenSettings,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                PageIndicator(
+                    pageCount = usages.size,
+                    currentPage = pagerState.currentPage,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 18.dp),
                 )
             }
-            if (rowItems.size == 1) {
-                Spacer(modifier = Modifier.weight(1f))
-            }
         }
     }
 }
 
 @Composable
-private fun EmptyDashboard() {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(28.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "没有启用的平台",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "打开设置并启用至少一个 LLM 平台后，看板会显示对应的用量进度。",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlatformUsageCard(
-    usage: PlatformUsage,
+private fun EmptyDashboard(
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ElevatedCard(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Box(
+        modifier = modifier.padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        ElevatedCard(modifier = Modifier.fillMaxWidth(0.72f)) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    text = usage.platform.displayName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = "没有启用的平台",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "${usage.platform.description} · ${usage.updatedAtLabel}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "打开设置并启用至少一个 LLM 平台后，看板会显示对应的用量进度。",
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-
-            usage.issue?.let { IssueBanner(issue = it) }
-
-            usage.metrics.forEach { metric ->
-                MetricProgress(metric = metric)
+                Button(onClick = onOpenSettings) {
+                    Text("打开设置")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun IssueBanner(issue: UsageIssue) {
+private fun PlatformUsagePage(
+    usage: PlatformUsage,
+    currentTime: String,
+    onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.padding(horizontal = 44.dp, vertical = 30.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(8.dp),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 40.dp, vertical = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = usage.platform.displayName,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = usage.platform.description,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        CardActions(
+                            currentTime = currentTime,
+                            onRefresh = onRefresh,
+                            onOpenSettings = onOpenSettings,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(0.8f))
+
+                    usage.metrics.forEach { metric ->
+                        MetricProgress(metric = metric)
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                usage.issue?.let { issue ->
+                    IssueBubble(
+                        issue = issue,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 88.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardActions(
+    currentTime: String,
+    onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = currentTime,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconTextButton(
+                text = "↻",
+                contentDescription = "刷新",
+                onClick = onRefresh,
+            )
+            IconTextButton(
+                text = "⚙",
+                contentDescription = "设置",
+                onClick = onOpenSettings,
+            )
+        }
+    }
+}
+
+@Composable
+private fun IconTextButton(
+    text: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.semantics {
+            this.contentDescription = contentDescription
+        },
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun IssueBubble(
+    issue: UsageIssue,
+    modifier: Modifier = Modifier,
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.fillMaxWidth(0.62f),
+        shape = RoundedCornerShape(18.dp),
+        shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = issue.type.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(text = issue.message, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = issue.message,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 @Composable
 private fun MetricProgress(metric: UsageMetric) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val progressColor = progressColorFor(metric.usageLevel)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,21 +301,73 @@ private fun MetricProgress(metric: UsageMetric) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = metric.percentLabel,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                text = metric.amountLabel,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = progressColor,
             )
         }
         LinearProgressIndicator(
             progress = { metric.progressFraction },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(14.dp),
-        )
-        Text(
-            text = metric.amountLabel,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                .height(10.dp),
+            color = progressColor,
+            trackColor = progressColor.copy(alpha = 0.18f),
         )
     }
+}
+
+@Composable
+private fun PageIndicator(
+    pageCount: Int,
+    currentPage: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(pageCount) { index ->
+            val selected = index == currentPage
+            Box(
+                modifier = Modifier
+                    .size(if (selected) 10.dp else 7.dp)
+                    .aspectRatio(1f)
+                    .background(
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                        shape = CircleShape,
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun progressColorFor(level: UsageLevel): Color {
+    return when (level) {
+        UsageLevel.HEALTHY -> Color(0xFF2E7D32)
+        UsageLevel.WARNING -> Color(0xFFEF6C00)
+        UsageLevel.CRITICAL -> MaterialTheme.colorScheme.error
+    }
+}
+
+@Composable
+private fun rememberCurrentTimeText(): String {
+    val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    var currentTime by remember { mutableStateOf(formatter.format(Date())) }
+
+    LaunchedEffect(formatter) {
+        while (true) {
+            currentTime = formatter.format(Date())
+            delay(30_000L)
+        }
+    }
+
+    return currentTime
 }

@@ -44,8 +44,8 @@
 - `data/`：`UsageRepository` 接口和 `MockUsageRepository`，首版通过 mock 数据模拟 Claude Code、OpenAI、Gemini、Cursor 等平台。
 - `brightness/`：纯 Kotlin 亮度策略，负责根据数据指纹变化决定是否调暗和目标亮度。
 - `ui/app/`：应用根组件和内存状态管理；当前没有引入 Navigation、ViewModel、DataStore 或依赖注入框架。
-- `ui/dashboard/`：横屏看板、平台卡片、进度条和错误提示。
-- `ui/settings/`：平台开关、凭据输入占位、主题选择、亮度范围和刷新间隔。
+- `ui/dashboard/`：强制横屏看板，主界面为固定全屏单页，不可上下滚动；通过左右滑动分页切换平台，每页只显示一个来源。每页卡片右上显示当前 `HH:mm` 时间和紧凑图标操作，错误信息以悬浮气泡展示；进度条上方末尾显示详细用量。
+- `ui/settings/`：平台开关、凭据输入占位、凭据测试按钮、主题选择、亮度范围和刷新间隔。
 
 首版凭据输入只保存在内存状态中，用于打通配置体验。接入真实 API 前必须先设计安全存储方案，并同步更新本文件。
 
@@ -72,6 +72,7 @@
 - 修改包名、`applicationId` 或 `namespace` 前，先确认影响范围，包括 Manifest、测试、资源和可能的发布配置。
 - 不要恢复 Android Studio 模板示例代码；默认 `Greeting` 示例已经被 MVP 看板替换。
 - 当前首版没有真实网络层。新增真实平台接入时，应先扩展 `UsageRepository` 抽象，并为各平台用量规则补充单元测试。
+- 主界面进度条按用量等级着色：低于 70% 为绿色，70% 及以上为橙色，90% 及以上使用 Material `error` 红色。
 
 ## 验证命令
 

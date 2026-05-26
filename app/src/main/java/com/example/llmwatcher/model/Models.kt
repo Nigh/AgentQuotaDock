@@ -36,8 +36,24 @@ enum class UsageIssueType(val title: String) {
     UNAVAILABLE("数据不可用"),
 }
 
+enum class UsageLevel {
+    HEALTHY,
+    WARNING,
+    CRITICAL,
+}
+
+enum class CredentialTestState {
+    SUCCESS,
+    ERROR,
+}
+
 data class UsageIssue(
     val type: UsageIssueType,
+    val message: String,
+)
+
+data class CredentialTestResult(
+    val state: CredentialTestState,
     val message: String,
 )
 
@@ -52,6 +68,13 @@ data class UsageMetric(
             0f
         } else {
             (used / limit).toFloat().coerceIn(0f, 1f)
+        }
+
+    val usageLevel: UsageLevel
+        get() = when {
+            progressFraction >= 0.9f -> UsageLevel.CRITICAL
+            progressFraction >= 0.7f -> UsageLevel.WARNING
+            else -> UsageLevel.HEALTHY
         }
 
     val percentLabel: String
@@ -107,6 +130,7 @@ data class PlatformSettings(
     val platform: LlmPlatform,
     val enabled: Boolean = true,
     val credential: String = "",
+    val testResult: CredentialTestResult? = null,
 )
 
 data class WatcherSettings(

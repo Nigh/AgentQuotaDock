@@ -17,6 +17,7 @@ fun LLMWatcherApp(
             onClose = state::closeSettings,
             onPlatformEnabledChange = state::setPlatformEnabled,
             onCredentialChange = state::setCredential,
+            onCredentialTest = state::testPlatformCredential,
             onThemePreferenceChange = state::setThemePreference,
             onDimBrightnessChange = state::setDimBrightness,
             onBrightBrightnessChange = state::setBrightBrightness,

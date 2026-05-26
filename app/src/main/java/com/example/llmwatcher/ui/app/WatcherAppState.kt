@@ -11,6 +11,8 @@ import com.example.llmwatcher.brightness.BrightnessState
 import com.example.llmwatcher.data.MockUsageRepository
 import com.example.llmwatcher.data.UsageRepository
 import com.example.llmwatcher.model.BrightnessSettings
+import com.example.llmwatcher.model.CredentialTestResult
+import com.example.llmwatcher.model.CredentialTestState
 import com.example.llmwatcher.model.LlmPlatform
 import com.example.llmwatcher.model.ThemePreference
 import com.example.llmwatcher.model.WatcherSettings
@@ -75,7 +77,44 @@ class WatcherAppState(
         updateSettings {
             copy(
                 platforms = platforms.map {
-                    if (it.platform == platform) it.copy(credential = credential) else it
+                    if (it.platform == platform) {
+                        it.copy(credential = credential, testResult = null)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
+    }
+
+    fun testPlatformCredential(platform: LlmPlatform) {
+        updateSettings {
+            copy(
+                platforms = platforms.map { settings ->
+                    if (settings.platform != platform) {
+                        settings
+                    } else if (!settings.enabled) {
+                        settings.copy(
+                            testResult = CredentialTestResult(
+                                state = CredentialTestState.ERROR,
+                                message = "请先启用该平台。",
+                            ),
+                        )
+                    } else if (settings.credential.isBlank()) {
+                        settings.copy(
+                            testResult = CredentialTestResult(
+                                state = CredentialTestState.ERROR,
+                                message = "请先填写凭据。",
+                            ),
+                        )
+                    } else {
+                        settings.copy(
+                            testResult = CredentialTestResult(
+                                state = CredentialTestState.SUCCESS,
+                                message = "Mock 验证通过，真实 API 接入后将在这里检查凭据有效性。",
+                            ),
+                        )
+                    }
                 },
             )
         }

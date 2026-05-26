@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.llmwatcher.model.BrightnessSettings
+import com.example.llmwatcher.model.CredentialTestState
 import com.example.llmwatcher.model.LlmPlatform
 import com.example.llmwatcher.model.PlatformSettings
 import com.example.llmwatcher.model.ThemePreference
@@ -39,6 +40,7 @@ fun SettingsScreen(
     onClose: () -> Unit,
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
+    onCredentialTest: (LlmPlatform) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDimBrightnessChange: (Float) -> Unit,
     onBrightBrightnessChange: (Float) -> Unit,
@@ -58,6 +60,7 @@ fun SettingsScreen(
                 platforms = uiState.settings.platforms,
                 onPlatformEnabledChange = onPlatformEnabledChange,
                 onCredentialChange = onCredentialChange,
+                onCredentialTest = onCredentialTest,
             )
             ThemeSection(
                 selected = uiState.settings.themePreference,
@@ -106,6 +109,7 @@ private fun PlatformSection(
     platforms: List<PlatformSettings>,
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
+    onCredentialTest: (LlmPlatform) -> Unit,
 ) {
     SectionCard(title = "LLM 平台") {
         Text(
@@ -118,6 +122,7 @@ private fun PlatformSection(
                 platformSettings = platformSettings,
                 onPlatformEnabledChange = onPlatformEnabledChange,
                 onCredentialChange = onCredentialChange,
+                onCredentialTest = onCredentialTest,
             )
         }
     }
@@ -128,6 +133,7 @@ private fun PlatformSettingsRow(
     platformSettings: PlatformSettings,
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
+    onCredentialTest: (LlmPlatform) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -154,21 +160,44 @@ private fun PlatformSettingsRow(
                 },
             )
         }
-        OutlinedTextField(
-            value = platformSettings.credential,
-            onValueChange = {
-                onCredentialChange(platformSettings.platform, it)
-            },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = platformSettings.enabled,
-            label = { Text(platformSettings.platform.credentialLabel) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                keyboardType = KeyboardType.Password,
-            ),
-        )
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = platformSettings.credential,
+                onValueChange = {
+                    onCredentialChange(platformSettings.platform, it)
+                },
+                modifier = Modifier.weight(1f),
+                enabled = platformSettings.enabled,
+                label = { Text(platformSettings.platform.credentialLabel) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Password,
+                ),
+            )
+            OutlinedButton(
+                onClick = { onCredentialTest(platformSettings.platform) },
+                enabled = platformSettings.enabled,
+            ) {
+                Text("测试")
+            }
+        }
+        platformSettings.testResult?.let { result ->
+            val color = when (result.state) {
+                CredentialTestState.SUCCESS -> MaterialTheme.colorScheme.primary
+                CredentialTestState.ERROR -> MaterialTheme.colorScheme.error
+            }
+            Text(
+                text = result.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = color,
+            )
+        }
     }
 }
 
