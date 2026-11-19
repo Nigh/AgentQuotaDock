@@ -1,63 +1,74 @@
 package com.example.llmwatcher.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import com.example.llmwatcher.model.ThemePreference
 
+// ── Standard Dark color scheme (xianii-theme dark palette) ───────────────────
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = XianiiPrimary,
+    onPrimary = XianiiOnPrimary,
+    secondary = XianiiSecondary,
+    onSecondary = XianiiOnSecondary,
+    tertiary = XianiiTertiary,
+    onTertiary = XianiiOnTertiary,
+    error = XianiiError,
+    onError = XianiiOnError,
+    background = XianiiBackground,
+    onBackground = XianiiOnSurface,
+    surface = XianiiSurface,
+    onSurface = XianiiOnSurface,
+    surfaceVariant = XianiiSurfaceVariant,
+    onSurfaceVariant = XianiiOnSurface,
+    outline = XianiiOutline,
+    outlineVariant = XianiiOutline,
+    inverseSurface = XianiiOnSurface,
+    inverseOnSurface = XianiiBackground,
+    inversePrimary = XianiiPrimary,
+    scrim = Color.Black.copy(alpha = 0.5f),
+    surfaceContainerHighest = XianiiNeutral,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+// ── OLED Black color scheme (pure black backgrounds for OLED displays) ────────
+private val OledBlackColorScheme = darkColorScheme(
+    primary = XianiiPrimary,
+    onPrimary = XianiiOnPrimary,
+    secondary = XianiiSecondary,
+    onSecondary = XianiiOnSecondary,
+    tertiary = XianiiTertiary,
+    onTertiary = XianiiOnTertiary,
+    error = XianiiError,
+    onError = XianiiOnError,
+    background = OledBackground,
+    onBackground = XianiiOnSurface,
+    surface = OledSurface,
+    onSurface = XianiiOnSurface,
+    surfaceVariant = OledSurfaceVariant,
+    onSurfaceVariant = XianiiOnSurface,
+    outline = OledOutline,
+    outlineVariant = OledOutlineVariant,
+    inverseSurface = XianiiOnSurface,
+    inverseOnSurface = OledBackground,
+    inversePrimary = XianiiPrimary,
+    scrim = Color.Black.copy(alpha = 0.6f),
+    surfaceContainerHighest = OledSurfaceVariant,
 )
 
 @Composable
 fun LLMWatcherTheme(
-    themePreference: ThemePreference = ThemePreference.SYSTEM,
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    themePreference: ThemePreference = ThemePreference.DARK,
+    content: @Composable () -> Unit,
 ) {
-    val darkTheme = when (themePreference) {
-        ThemePreference.SYSTEM -> isSystemInDarkTheme()
-        ThemePreference.LIGHT -> false
-        ThemePreference.DARK -> true
-    }
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val colorScheme = when (themePreference) {
+        ThemePreference.DARK -> DarkColorScheme
+        ThemePreference.OLED_BLACK -> OledBlackColorScheme
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }
