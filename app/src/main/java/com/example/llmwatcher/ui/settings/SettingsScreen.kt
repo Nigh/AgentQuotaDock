@@ -207,6 +207,11 @@ private fun ThemeSection(
     onThemePreferenceChange: (ThemePreference) -> Unit,
 ) {
     SectionCard(title = "主题模式") {
+        Text(
+            text = "纯黑 OLED 主题将大部分背景设为纯黑色，适合常亮放置的 OLED 屏幕手机，降低能耗与烧屏风险。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ThemePreference.entries.forEach { themePreference ->
                 if (selected == themePreference) {

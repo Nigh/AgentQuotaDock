@@ -105,9 +105,8 @@ data class UsageSnapshot(
 )
 
 enum class ThemePreference(val label: String) {
-    SYSTEM("跟随系统"),
-    LIGHT("浅色"),
-    DARK("深色"),
+    DARK("标准深色"),
+    OLED_BLACK("纯黑 OLED"),
 }
 
 data class BrightnessSettings(
@@ -135,7 +134,7 @@ data class PlatformSettings(
 
 data class WatcherSettings(
     val platforms: List<PlatformSettings> = LlmPlatform.entries.map { PlatformSettings(it) },
-    val themePreference: ThemePreference = ThemePreference.SYSTEM,
+    val themePreference: ThemePreference = ThemePreference.DARK,
     val brightness: BrightnessSettings = BrightnessSettings(),
     val refreshIntervalSeconds: Int = 15,
 ) {

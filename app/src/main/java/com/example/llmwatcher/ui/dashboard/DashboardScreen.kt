@@ -44,6 +44,9 @@ import com.example.llmwatcher.model.UsageIssue
 import com.example.llmwatcher.model.UsageLevel
 import com.example.llmwatcher.model.UsageMetric
 import com.example.llmwatcher.model.WatcherUiState
+import com.example.llmwatcher.ui.theme.XianiiError
+import com.example.llmwatcher.ui.theme.XianiiSuccess
+import com.example.llmwatcher.ui.theme.XianiiWarning
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -351,9 +354,9 @@ private fun PageIndicator(
 @Composable
 private fun progressColorFor(level: UsageLevel): Color {
     return when (level) {
-        UsageLevel.HEALTHY -> Color(0xFF2E7D32)
-        UsageLevel.WARNING -> Color(0xFFEF6C00)
-        UsageLevel.CRITICAL -> MaterialTheme.colorScheme.error
+        UsageLevel.HEALTHY -> XianiiSuccess   // #7FC08C
+        UsageLevel.WARNING -> XianiiWarning   // #EEBC4A
+        UsageLevel.CRITICAL -> XianiiError    // #FA6863
     }
 }
 
