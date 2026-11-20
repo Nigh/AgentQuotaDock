@@ -7,26 +7,15 @@ enum class LlmPlatform(
     val credentialLabel: String,
     val description: String,
 ) {
-    CLAUDE_CODE(
-        displayName = "Claude Code",
-        credentialLabel = "Anthropic API key / Claude token",
-        description = "5 小时窗口与周用量",
-    ),
-    OPENAI(
-        displayName = "OpenAI",
-        credentialLabel = "OpenAI API key",
-        description = "月度预算用量",
-    ),
-    GEMINI(
-        displayName = "Gemini",
-        credentialLabel = "Google AI Studio API key",
-        description = "每日请求额度",
-    ),
-    CURSOR(
-        displayName = "Cursor",
-        credentialLabel = "Cursor session token",
-        description = "团队额度与请求量",
-    ),
+    CODEX("Codex", "OAuth access token", "Codex 额度"),
+    CLAUDE("Claude", "OAuth access token", "5 小时窗口与周用量"),
+    ANTIGRAVITY("Antigravity", "Google OAuth access token", "模型配额"),
+    DEEPSEEK("DeepSeek", "API key", "账户余额"),
+    ZAI("z.ai", "API key", "使用额度"),
+    MINIMAX("MiniMax", "API key", "使用额度"),
+    CURSOR("Cursor", "Cookie", "使用额度"),
+    KIMI("Kimi", "Cookie", "使用额度"),
+    KIMI_CODE("Kimi Code API", "API key", "使用额度"),
 }
 
 enum class UsageIssueType(val title: String) {
@@ -81,7 +70,7 @@ data class UsageMetric(
         get() = String.format(Locale.US, "%.0f%%", progressFraction * 100f)
 
     val amountLabel: String
-        get() = "${formatAmount(used)} / ${formatAmount(limit)} $unit"
+        get() = if (limit <= 0.0) "${formatAmount(used)} $unit" else "${formatAmount(used)} / ${formatAmount(limit)} $unit"
 
     private fun formatAmount(value: Double): String {
         return if (value % 1.0 == 0.0) {
@@ -127,7 +116,7 @@ data class BrightnessSettings(
 
 data class PlatformSettings(
     val platform: LlmPlatform,
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val credential: String = "",
     val testResult: CredentialTestResult? = null,
 )
@@ -146,6 +135,8 @@ data class WatcherUiState(
     val settings: WatcherSettings = WatcherSettings(),
     val usageSnapshot: UsageSnapshot = UsageSnapshot(emptyList(), "尚未刷新"),
     val isSettingsOpen: Boolean = false,
+    val loginPlatform: LlmPlatform? = null,
+    val isRefreshing: Boolean = false,
     val isDimmed: Boolean = false,
     val unchangedRefreshes: Int = 0,
 )

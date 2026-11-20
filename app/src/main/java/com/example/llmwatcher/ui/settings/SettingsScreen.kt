@@ -19,6 +19,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +45,7 @@ fun SettingsScreen(
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
     onCredentialTest: (LlmPlatform) -> Unit,
+    onLogin: (LlmPlatform) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDimBrightnessChange: (Float) -> Unit,
     onBrightBrightnessChange: (Float) -> Unit,
@@ -61,6 +66,7 @@ fun SettingsScreen(
                 onPlatformEnabledChange = onPlatformEnabledChange,
                 onCredentialChange = onCredentialChange,
                 onCredentialTest = onCredentialTest,
+                onLogin = onLogin,
             )
             ThemeSection(
                 selected = uiState.settings.themePreference,
@@ -110,10 +116,11 @@ private fun PlatformSection(
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
     onCredentialTest: (LlmPlatform) -> Unit,
+    onLogin: (LlmPlatform) -> Unit,
 ) {
     SectionCard(title = "LLM 平台") {
         Text(
-            text = "首版使用 mock 数据，凭据只保存在内存中用于打通配置体验。",
+            text = "登录或填写凭据后，可单独选择在看板显示的平台。凭据使用设备密钥加密保存。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -123,6 +130,7 @@ private fun PlatformSection(
                 onPlatformEnabledChange = onPlatformEnabledChange,
                 onCredentialChange = onCredentialChange,
                 onCredentialTest = onCredentialTest,
+                onLogin = onLogin,
             )
         }
     }
@@ -134,7 +142,15 @@ private fun PlatformSettingsRow(
     onPlatformEnabledChange: (LlmPlatform, Boolean) -> Unit,
     onCredentialChange: (LlmPlatform, String) -> Unit,
     onCredentialTest: (LlmPlatform) -> Unit,
+    onLogin: (LlmPlatform) -> Unit,
 ) {
+    val regional = platformSettings.platform == LlmPlatform.ZAI || platformSettings.platform == LlmPlatform.MINIMAX
+    var region by remember(platformSettings.platform) {
+        mutableStateOf(if (platformSettings.credential.startsWith("cn:") ||
+            (!platformSettings.credential.startsWith("global:") && platformSettings.platform == LlmPlatform.ZAI)) "cn" else "global")
+    }
+    val apiKey = if (regional) platformSettings.credential.removePrefix("cn:").removePrefix("global:")
+        else platformSettings.credential
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -155,36 +171,62 @@ private fun PlatformSettingsRow(
             }
             Switch(
                 checked = platformSettings.enabled,
+                enabled = platformSettings.credential.isNotBlank(),
                 onCheckedChange = {
                     onPlatformEnabledChange(platformSettings.platform, it)
                 },
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = platformSettings.credential,
-                onValueChange = {
-                    onCredentialChange(platformSettings.platform, it)
-                },
-                modifier = Modifier.weight(1f),
-                enabled = platformSettings.enabled,
-                label = { Text(platformSettings.platform.credentialLabel) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    keyboardType = KeyboardType.Password,
-                ),
-            )
-            OutlinedButton(
-                onClick = { onCredentialTest(platformSettings.platform) },
-                enabled = platformSettings.enabled,
+        if (platformSettings.platform in listOf(LlmPlatform.CODEX, LlmPlatform.CLAUDE,
+                LlmPlatform.ANTIGRAVITY, LlmPlatform.CURSOR, LlmPlatform.KIMI)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { onLogin(platformSettings.platform) }) {
+                    Text(if (platformSettings.credential.isBlank()) "登录" else "重新登录")
+                }
+                Text(if (platformSettings.credential.isBlank()) "未登录" else "已配置")
+                OutlinedButton(onClick = { onCredentialTest(platformSettings.platform) },
+                    enabled = platformSettings.credential.isNotBlank()) { Text("测试") }
+                if (platformSettings.credential.isNotBlank()) {
+                    OutlinedButton(onClick = {
+                        onPlatformEnabledChange(platformSettings.platform, false)
+                        onCredentialChange(platformSettings.platform, "")
+                    }) { Text("移除") }
+                }
+            }
+        } else {
+            if (regional) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("cn" to "中国区", "global" to "国际区").forEach { (value, label) ->
+                        val select = {
+                            region = value
+                            if (apiKey.isNotBlank()) onCredentialChange(platformSettings.platform, "$value:$apiKey")
+                        }
+                        if (region == value) Button(onClick = select) { Text(label) }
+                        else OutlinedButton(onClick = select) { Text(label) }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("测试")
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = {
+                        onCredentialChange(platformSettings.platform, if (regional && it.isNotBlank()) "$region:$it" else it)
+                    },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(platformSettings.platform.credentialLabel) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Password,
+                    ),
+                )
+                OutlinedButton(onClick = { onCredentialTest(platformSettings.platform) },
+                    enabled = platformSettings.credential.isNotBlank()) { Text("测试") }
             }
         }
         platformSettings.testResult?.let { result ->

@@ -60,7 +60,10 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
-        val usages = uiState.usageSnapshot.platforms
+        val enabled = uiState.settings.platforms
+            .filter { it.enabled && it.credential.isNotBlank() }
+            .map { it.platform }.toSet()
+        val usages = uiState.usageSnapshot.platforms.filter { it.platform in enabled }
         if (usages.isEmpty()) {
             EmptyDashboard(
                 onOpenSettings = onOpenSettings,
@@ -110,12 +113,12 @@ private fun EmptyDashboard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "没有启用的平台",
+                    text = "暂无显示的平台",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "打开设置并启用至少一个 LLM 平台后，看板会显示对应的用量进度。",
+                    text = "在设置中登录或填写凭据，并选择要在看板显示的平台。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -310,14 +313,14 @@ private fun MetricProgress(metric: UsageMetric) {
                 color = progressColor,
             )
         }
-        LinearProgressIndicator(
-            progress = { metric.progressFraction },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp),
-            color = progressColor,
-            trackColor = progressColor.copy(alpha = 0.18f),
-        )
+        if (metric.limit > 0.0) {
+            LinearProgressIndicator(
+                progress = { metric.progressFraction },
+                modifier = Modifier.fillMaxWidth().height(10.dp),
+                color = progressColor,
+                trackColor = progressColor.copy(alpha = 0.18f),
+            )
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.llmwatcher.ui.dashboard.DashboardScreen
 import com.example.llmwatcher.ui.settings.SettingsScreen
+import com.example.llmwatcher.ui.login.ProviderLogin
 
 @Composable
 fun LLMWatcherApp(
@@ -11,13 +12,21 @@ fun LLMWatcherApp(
     modifier: Modifier = Modifier,
 ) {
     val uiState = state.uiState
-    if (uiState.isSettingsOpen) {
+    val loginPlatform = uiState.loginPlatform
+    if (loginPlatform != null) {
+        ProviderLogin(
+            platform = loginPlatform,
+            onSuccess = { state.loginSuccess(loginPlatform, it) },
+            onCancel = state::closeLogin,
+        )
+    } else if (uiState.isSettingsOpen) {
         SettingsScreen(
             uiState = uiState,
             onClose = state::closeSettings,
             onPlatformEnabledChange = state::setPlatformEnabled,
             onCredentialChange = state::setCredential,
             onCredentialTest = state::testPlatformCredential,
+            onLogin = state::openLogin,
             onThemePreferenceChange = state::setThemePreference,
             onDimBrightnessChange = state::setDimBrightness,
             onBrightBrightnessChange = state::setBrightBrightness,
