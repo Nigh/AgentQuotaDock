@@ -7,6 +7,11 @@ import org.junit.Test
 
 class UsageMetricTest {
     @Test
+    fun balanceDoesNotDisplayFictitiousLimit() {
+        assertEquals("12.5 CNY", UsageMetric("余额", 12.5, 0.0, "CNY").amountLabel)
+    }
+
+    @Test
     fun progressFractionClampsToOne() {
         val metric = UsageMetric(
             label = "Budget",
