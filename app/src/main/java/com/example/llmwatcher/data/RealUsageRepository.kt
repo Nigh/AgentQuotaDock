@@ -10,6 +10,10 @@ import com.example.llmwatcher.model.UsageSnapshot
 import com.example.llmwatcher.model.WatcherSettings
 import java.io.IOException
 import java.net.URL
+import java.text.ParsePosition
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import javax.net.ssl.HttpsURLConnection
 import org.json.JSONObject
 
@@ -93,7 +97,7 @@ internal fun parseCodexUsage(response: JSONObject): List<UsageMetric> {
         if (!value.isFinite()) throw IllegalArgumentException()
         val seconds = window.optInt("limit_window_seconds")
         val name = when (seconds) { 18000 -> "5 小时用量"; 604800 -> "周用量"; else -> label }
-        UsageMetric(name, value, 100.0, "%")
+        UsageMetric(name, value, 100.0, "%", window.epochSecondsMillis("reset_at"))
     }
 }
 
@@ -139,24 +143,24 @@ private fun fetchAntigravity(token: String): List<UsageMetric> {
         if (!quota.has("remainingFraction") || quota.isNull("remainingFraction")) continue
         val remaining = quota.getDouble("remainingFraction")
         if (!remaining.isFinite()) throw IllegalArgumentException()
-        result += UsageMetric(model.optString("displayName").ifBlank { id }, (1 - remaining) * 100, 100.0, "%")
+        result += UsageMetric(model.optString("displayName").ifBlank { id }, (1 - remaining) * 100, 100.0, "%", quota.isoResetTime("resetTime"))
     }
     if (result.isNotEmpty() && result.all { it.used <= 0.1 }) {
         val buckets = request(base + "retrieveUserQuota", token, projectBody).optJSONArray("buckets") ?: return emptyList()
-        val byModel = mutableMapOf<String, Double>()
+        val byModel = mutableMapOf<String, Pair<Double, Long?>>()
         for (i in 0 until buckets.length()) {
             val bucket = buckets.getJSONObject(i)
             val id = bucket.optString("modelId")
             if (id.isNotBlank() && bucket.has("remainingFraction") && !bucket.isNull("remainingFraction")) {
                 val remaining = bucket.getDouble("remainingFraction")
                 if (!remaining.isFinite()) throw IllegalArgumentException()
-                byModel[id] = remaining
+                byModel[id] = remaining to bucket.isoResetTime("resetTime")
             }
         }
         if (byModel.isEmpty()) return emptyList()
-        return byModel.map { (id, remaining) ->
+        return byModel.map { (id, quota) ->
             val label = models.optJSONObject(id)?.optString("displayName")?.ifBlank { id } ?: id
-            UsageMetric(label, (1 - remaining) * 100, 100.0, "%")
+            UsageMetric(label, (1 - quota.first) * 100, 100.0, "%", quota.second)
         }
     }
     return result
@@ -185,8 +189,30 @@ internal fun parseAntigravitySummary(root: JSONObject): List<UsageMetric> {
             val remaining = source.getDouble("remainingFraction")
             if (!remaining.isFinite()) throw IllegalArgumentException()
             val label = bucket.optString("displayName").ifBlank { bucket.optString("name").ifBlank { group.optString("displayName").ifBlank { "配额" } } }
-            result += UsageMetric(label, (1 - remaining) * 100, 100.0, "%")
+            result += UsageMetric(label, (1 - remaining) * 100, 100.0, "%", bucket.isoResetTime("resetTime"))
         }
     }
     return result
 }
+
+internal fun JSONObject.epochMillis(key: String): Long? =
+    opt(key)?.toString()?.toLongOrNull()
+
+internal fun JSONObject.epochSecondsMillis(key: String): Long? =
+    epochMillis(key)?.takeIf { it in Long.MIN_VALUE / 1000..Long.MAX_VALUE / 1000 }?.times(1000)
+
+internal fun JSONObject.isoResetTime(vararg keys: String): Long? {
+    val value = keys.firstNotNullOfOrNull { key -> (opt(key) as? String)?.takeIf { it.isNotBlank() } } ?: return null
+    val match = ISO_RESET_TIME.matchEntire(value) ?: return null
+    val fraction = match.groupValues[2].padEnd(3, '0').take(3)
+    val normalized = "${match.groupValues[1]}.$fraction${match.groupValues[3]}"
+    val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US).apply {
+        isLenient = false
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    val position = ParsePosition(0)
+    val date = format.parse(normalized, position) ?: return null
+    return date.time.takeIf { position.index == normalized.length }
+}
+
+private val ISO_RESET_TIME = Regex("""(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})""")

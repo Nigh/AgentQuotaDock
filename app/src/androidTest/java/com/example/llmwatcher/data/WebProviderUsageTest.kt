@@ -32,6 +32,19 @@ class WebProviderUsageTest {
     }
 
     @Test
+    fun claudeAndKimiReadResetTimesWithoutInventingMissingValues() {
+        val claude = parseWebProviderUsage(LlmPlatform.CLAUDE, """{
+            "five_hour":{"utilization":25,"resets_at":"2024-01-01T00:00:00.123456Z"},
+            "seven_day":{"utilization":30,"resets_at":"2024-01-01T02:00:00+02:00"},
+            "seven_day_opus":{"utilization":0,"resets_at":null}}""")
+        assertEquals(listOf(1704067200123L, 1704067200000L, null), claude.map { it.resetsAtEpochMillis })
+        val kimi = parseWebProviderUsage(LlmPlatform.KIMI, """{"usages":[{"scope":"FEATURE_CODING",
+            "detail":{"limit":"100","used":"1","resetTime":"2024-01-01T00:00:00Z"},
+            "limits":[{"detail":{"limit":"10","used":"1","resetTime":"invalid"}}]}]}""")
+        assertEquals(listOf(null, 1704067200000L), kimi.map { it.resetsAtEpochMillis })
+    }
+
+    @Test
     fun cursorPrefersPercentAndFallsBackToCents() {
         val body = """{"individualUsage":{
             "plan":{"used":0,"limit":0,"totalPercentUsed":35.5},

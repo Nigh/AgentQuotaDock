@@ -67,8 +67,9 @@ internal fun parseApiProvider(platform: LlmPlatform, body: String): List<UsageMe
                 val current = item.number("currentValue")
                 val remaining = item.number("remaining")
                 val used = if (limit != null && remaining != null) maxOf(limit - remaining, current ?: 0.0) else current
-                if (limit != null && limit > 0 && used != null) UsageMetric(label, used, limit, "次")
-                else UsageMetric(label, item.requiredNumber("percentage"), 100.0, "%")
+                val reset = item.epochMillis("nextResetTime")
+                if (limit != null && limit > 0 && used != null) UsageMetric(label, used, limit, "次", reset)
+                else UsageMetric(label, item.requiredNumber("percentage"), 100.0, "%", reset)
             }
         }
         LlmPlatform.MINIMAX -> {
@@ -86,10 +87,17 @@ internal fun parseApiProvider(platform: LlmPlatform, body: String): List<UsageMe
                         val limit = model.number("current_${prefix}_total_count")
                         val remaining = model.number("current_${prefix}_usage_count")
                         val percent = model.number("current_${prefix}_remaining_percent")
+                        val reset = model.epochMillis(if (prefix == "interval") "end_time" else "weekly_end_time")?.let {
+                            when {
+                                it > 1_000_000_000_000L -> it
+                                it > 1_000_000_000L -> it * 1000
+                                else -> null
+                            }
+                        }
                         if (limit != null && limit > 0 && remaining != null) {
-                            add(UsageMetric("$name $label", (limit - remaining).coerceAtLeast(0.0), limit, "次"))
+                            add(UsageMetric("$name $label", (limit - remaining).coerceAtLeast(0.0), limit, "次", reset))
                         } else if (percent != null) {
-                            add(UsageMetric("$name $label", (100.0 - percent).coerceIn(0.0, 100.0), 100.0, "%"))
+                            add(UsageMetric("$name $label", (100.0 - percent).coerceIn(0.0, 100.0), 100.0, "%", reset))
                         }
                     }
                     addWindow("interval", "用量")
@@ -100,8 +108,9 @@ internal fun parseApiProvider(platform: LlmPlatform, body: String): List<UsageMe
         LlmPlatform.KIMI_CODE -> buildList {
             val ratios = root.optJSONObject("usages")
             fun addRatio(key: String, label: String): Boolean {
-                val ratio = ratios?.optJSONObject(key)?.number("used_ratio") ?: return false
-                add(UsageMetric(label, (ratio * 100.0).coerceIn(0.0, 100.0), 100.0, "%"))
+                val pool = ratios?.optJSONObject(key) ?: return false
+                val ratio = pool.number("used_ratio") ?: return false
+                add(UsageMetric(label, (ratio * 100.0).coerceIn(0.0, 100.0), 100.0, "%", pool.isoResetTime("reset_time", "resetAt", "reset_at")))
                 return true
             }
             fun addCounts(detail: JSONObject?, label: String) {
@@ -109,7 +118,7 @@ internal fun parseApiProvider(platform: LlmPlatform, body: String): List<UsageMe
                 val limit = detail.number("limit") ?: return
                 if (limit <= 0) return
                 val used = detail.number("used") ?: detail.number("remaining")?.let { limit - it } ?: return
-                add(UsageMetric(label, used.coerceAtLeast(0.0), limit, "次"))
+                add(UsageMetric(label, used.coerceAtLeast(0.0), limit, "次", detail.isoResetTime("resetTime", "resetAt", "reset_time", "reset_at")))
             }
             if (!addRatio("limit_5h", "5 小时用量")) {
                 val limits = root.optJSONArray("limits")

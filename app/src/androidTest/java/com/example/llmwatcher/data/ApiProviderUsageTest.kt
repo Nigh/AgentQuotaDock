@@ -51,6 +51,25 @@ class ApiProviderUsageTest {
     }
 
     @Test
+    fun resetTimesFollowEachProviderWindow() {
+        val zai = parseApiProvider(LlmPlatform.ZAI, """{"code":200,"data":{"limits":[
+            {"unit":3,"percentage":20,"nextResetTime":1704067200000},
+            {"unit":6,"percentage":30,"nextResetTime":null}]}}""")
+        assertEquals(listOf(1704067200000L, null), zai.map { it.resetsAtEpochMillis })
+        val minimax = parseApiProvider(LlmPlatform.MINIMAX, """{"model_remains":[
+            {"model_name":"M","current_interval_remaining_percent":90,"end_time":1704067200,
+             "current_weekly_remaining_percent":80,"weekly_end_time":1704067200123}]}""")
+        assertEquals(listOf(1704067200000L, 1704067200123L), minimax.map { it.resetsAtEpochMillis })
+        val kimi = parseApiProvider(LlmPlatform.KIMI_CODE, """{
+            "usages":{"limit_5h":{"used_ratio":0.5,"reset_time":"2024-01-01T00:00:00Z"}},
+            "usage":{"limit":"10","used":"1","resetTime":"2024-01-01T00:00:00.5Z"}}""")
+        assertEquals(listOf(1704067200000L, 1704067200500L), kimi.map { it.resetsAtEpochMillis })
+        val fallback = parseApiProvider(LlmPlatform.KIMI_CODE, """{"limits":[{
+            "window":{"duration":5},"detail":{"limit":"10","used":"1","reset_at":"2024-01-01T00:00:00Z"}}]}""")
+        assertEquals(1704067200000L, fallback.single().resetsAtEpochMillis)
+    }
+
+    @Test
     fun otherPlatformsDoNotRequestNetwork() {
         assertTrue(fetchApiProvider(LlmPlatform.CLAUDE, "").isEmpty())
     }

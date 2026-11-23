@@ -1,5 +1,6 @@
 package com.example.llmwatcher.ui.settings
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,6 +37,8 @@ import com.example.llmwatcher.model.LlmPlatform
 import com.example.llmwatcher.model.PlatformSettings
 import com.example.llmwatcher.model.ThemePreference
 import com.example.llmwatcher.model.WatcherUiState
+import com.example.llmwatcher.ui.theme.OledBackground
+import com.example.llmwatcher.ui.theme.OledAwareButton as Button
 import kotlin.math.roundToInt
 
 @Composable
@@ -47,6 +50,7 @@ fun SettingsScreen(
     onCredentialTest: (LlmPlatform) -> Unit,
     onLogin: (LlmPlatform) -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
+    onShowRemainingChange: (Boolean) -> Unit,
     onDimBrightnessChange: (Float) -> Unit,
     onBrightBrightnessChange: (Float) -> Unit,
     onRefreshIntervalChange: (Int) -> Unit,
@@ -71,6 +75,10 @@ fun SettingsScreen(
             ThemeSection(
                 selected = uiState.settings.themePreference,
                 onThemePreferenceChange = onThemePreferenceChange,
+            )
+            UsageDisplaySection(
+                showRemaining = uiState.settings.showRemaining,
+                onShowRemainingChange = onShowRemainingChange,
             )
             BrightnessSection(
                 brightness = uiState.settings.brightness,
@@ -99,7 +107,7 @@ private fun SettingsHeader(onClose: () -> Unit) {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "平台、凭据、主题、亮度与刷新频率",
+                text = "平台、凭据、主题、用量显示、亮度与刷新频率",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -201,7 +209,7 @@ private fun PlatformSettingsRow(
                             region = value
                             if (apiKey.isNotBlank()) onCredentialChange(platformSettings.platform, "$value:$apiKey")
                         }
-                        if (region == value) Button(onClick = select) { Text(label) }
+                        if (region == value) Button(onClick = select, selected = true) { Text(label) }
                         else OutlinedButton(onClick = select) { Text(label) }
                     }
                 }
@@ -257,13 +265,31 @@ private fun ThemeSection(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ThemePreference.entries.forEach { themePreference ->
                 if (selected == themePreference) {
-                    Button(onClick = { onThemePreferenceChange(themePreference) }) {
+                    Button(onClick = { onThemePreferenceChange(themePreference) }, selected = true) {
                         Text(themePreference.label)
                     }
                 } else {
                     OutlinedButton(onClick = { onThemePreferenceChange(themePreference) }) {
                         Text(themePreference.label)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsageDisplaySection(
+    showRemaining: Boolean,
+    onShowRemainingChange: (Boolean) -> Unit,
+) {
+    SectionCard(title = "用量显示") {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(false to "已用量", true to "剩余用量").forEach { (remaining, label) ->
+                if (showRemaining == remaining) {
+                    Button(onClick = { onShowRemainingChange(remaining) }, selected = true) { Text(label) }
+                } else {
+                    OutlinedButton(onClick = { onShowRemainingChange(remaining) }) { Text(label) }
                 }
             }
         }
@@ -351,7 +377,14 @@ private fun SectionCard(
     title: String,
     content: @Composable () -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    val cardModifier = Modifier.fillMaxWidth()
+    ElevatedCard(
+        modifier = if (MaterialTheme.colorScheme.background == OledBackground) {
+            cardModifier.border(1.dp, MaterialTheme.colorScheme.outline, CardDefaults.elevatedShape)
+        } else {
+            cardModifier
+        },
+    ) {
         Column(
             modifier = Modifier.padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

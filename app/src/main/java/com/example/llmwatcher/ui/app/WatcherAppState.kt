@@ -147,6 +147,7 @@ class WatcherAppState(
     }
 
     fun setThemePreference(value: ThemePreference) { updateSettings { copy(themePreference = value) } }
+    fun setShowRemaining(value: Boolean) { updateSettings { copy(showRemaining = value) } }
     fun setDimBrightness(value: Float) { updateBrightness { it.copy(dimBrightness = value.coerceAtMost(it.brightBrightness)).normalized() } }
     fun setBrightBrightness(value: Float) { updateBrightness { it.copy(brightBrightness = value.coerceAtLeast(it.dimBrightness)).normalized() } }
     fun setRefreshInterval(seconds: Int) { updateSettings { copy(refreshIntervalSeconds = seconds.coerceIn(5, 120)) } }

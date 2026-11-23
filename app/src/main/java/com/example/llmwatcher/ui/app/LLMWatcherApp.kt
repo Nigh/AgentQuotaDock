@@ -1,7 +1,16 @@
 package com.example.llmwatcher.ui.app
 
+import android.app.Activity
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.example.llmwatcher.ui.dashboard.DashboardScreen
 import com.example.llmwatcher.ui.settings.SettingsScreen
 import com.example.llmwatcher.ui.login.ProviderLogin
@@ -13,6 +22,24 @@ fun LLMWatcherApp(
 ) {
     val uiState = state.uiState
     val loginPlatform = uiState.loginPlatform
+    val context = LocalContext.current
+    var lastBackAt by remember(uiState.isSettingsOpen, loginPlatform) { mutableStateOf<Long?>(null) }
+    BackHandler {
+        when {
+            loginPlatform != null -> state.closeLogin()
+            uiState.isSettingsOpen -> state.closeSettings()
+            else -> {
+                val now = SystemClock.elapsedRealtime()
+                val previous = lastBackAt
+                if (shouldExitOnBack(previous, now)) {
+                    (context as? Activity)?.finish()
+                } else {
+                    lastBackAt = now
+                    Toast.makeText(context, "再按一次返回键退出", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
     if (loginPlatform != null) {
         ProviderLogin(
             platform = loginPlatform,
@@ -28,6 +55,7 @@ fun LLMWatcherApp(
             onCredentialTest = state::testPlatformCredential,
             onLogin = state::openLogin,
             onThemePreferenceChange = state::setThemePreference,
+            onShowRemainingChange = state::setShowRemaining,
             onDimBrightnessChange = state::setDimBrightness,
             onBrightBrightnessChange = state::setBrightBrightness,
             onRefreshIntervalChange = state::setRefreshInterval,
@@ -42,3 +70,6 @@ fun LLMWatcherApp(
         )
     }
 }
+
+internal fun shouldExitOnBack(previous: Long?, now: Long): Boolean =
+    previous != null && now - previous in 0 until 2_000L
