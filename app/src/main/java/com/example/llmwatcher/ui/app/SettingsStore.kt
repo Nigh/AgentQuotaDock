@@ -69,6 +69,7 @@ class SettingsStore(context: Context) {
             brightBrightness = preferences.getFloat("bright", 0.9f),
         ).normalized(),
         refreshIntervalSeconds = preferences.getInt("interval", 15).coerceIn(5, 120),
+        showRemaining = preferences.getBoolean("show_remaining", false),
     )
 
     fun save(settings: WatcherSettings) {
@@ -78,6 +79,7 @@ class SettingsStore(context: Context) {
             putFloat("dim", settings.brightness.dimBrightness)
             putFloat("bright", settings.brightness.brightBrightness)
             putInt("interval", settings.refreshIntervalSeconds)
+            putBoolean("show_remaining", settings.showRemaining)
         }.apply()
     }
 }

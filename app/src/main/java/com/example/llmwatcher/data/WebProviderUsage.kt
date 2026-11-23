@@ -82,7 +82,7 @@ internal fun parseWebProviderUsage(platform: LlmPlatform, body: String): List<Us
         LlmPlatform.CLAUDE -> {
             fun window(key: String, label: String) {
                 val value = root.optJSONObject(key) ?: return
-                if (!value.isNull("utilization")) metrics.add(UsageMetric(label, value.getDouble("utilization"), 100.0, "%"))
+                if (!value.isNull("utilization")) metrics.add(UsageMetric(label, value.getDouble("utilization"), 100.0, "%", value.isoResetTime("resets_at")))
             }
             window("five_hour", "5 小时用量")
             window("seven_day", "周用量")
@@ -130,7 +130,7 @@ internal fun parseWebProviderUsage(platform: LlmPlatform, body: String): List<Us
                 if (limit <= 0) return
                 val used = if (!value.isNull("used")) value.getDouble("used")
                     else (limit - value.getDouble("remaining")).coerceAtLeast(0.0)
-                metrics.add(UsageMetric(label, used, limit, "次"))
+                metrics.add(UsageMetric(label, used, limit, "次", value.isoResetTime("resetTime")))
             }
             val limits = coding.optJSONArray("limits")
             if (limits != null && limits.length() > 0) detail(limits.getJSONObject(0).optJSONObject("detail"), "限速用量")

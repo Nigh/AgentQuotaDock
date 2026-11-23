@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.llmwatcher.model.LlmPlatform
+import com.example.llmwatcher.ui.theme.OledAwareButton as Button
+import com.example.llmwatcher.ui.theme.OledBackground
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -86,6 +88,7 @@ suspend fun accessToken(platform: LlmPlatform, stored: String, save: (String) ->
 
 @Composable
 fun ProviderLogin(platform: LlmPlatform, onSuccess: (String) -> Unit, onCancel: () -> Unit) {
+    val isOled = MaterialTheme.colorScheme.background == OledBackground
     val context = LocalContext.current
     var message by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
@@ -162,6 +165,7 @@ fun ProviderLogin(platform: LlmPlatform, onSuccess: (String) -> Unit, onCancel: 
                 }) { Text("完成登录") }
                 AndroidView(modifier = Modifier.weight(1f).fillMaxWidth(), factory = { ctx ->
                     WebView(ctx).apply {
+                        if (isOled) setBackgroundColor(android.graphics.Color.BLACK)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         webViewClient = object : WebViewClient() {

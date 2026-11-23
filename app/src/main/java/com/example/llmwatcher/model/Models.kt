@@ -51,6 +51,7 @@ data class UsageMetric(
     val used: Double,
     val limit: Double,
     val unit: String,
+    val resetsAtEpochMillis: Long? = null,
 ) {
     val progressFraction: Float
         get() = if (limit <= 0.0) {
@@ -126,6 +127,7 @@ data class WatcherSettings(
     val themePreference: ThemePreference = ThemePreference.DARK,
     val brightness: BrightnessSettings = BrightnessSettings(),
     val refreshIntervalSeconds: Int = 15,
+    val showRemaining: Boolean = false,
 ) {
     val enabledPlatforms: List<LlmPlatform>
         get() = platforms.filter { it.enabled }.map { it.platform }

@@ -19,4 +19,18 @@ class ProviderQuotaParsingTest {
         assertEquals(1, quota.size)
         assertEquals(75.0, quota.single().used, 0.0)
     }
+
+    @Test
+    fun resetTimesUseEpochSecondsAndIsoDates() {
+        val codex = parseCodexUsage(JSONObject("""{"rate_limit":{
+            "primary_window":{"used_percent":1,"limit_window_seconds":18000,"reset_at":1704067200},
+            "secondary_window":{"used_percent":2,"limit_window_seconds":604800,"reset_at":9223372036854776}}}"""))
+        assertEquals(1704067200000L, codex[0].resetsAtEpochMillis)
+        assertEquals(null, codex[1].resetsAtEpochMillis)
+        val quota = parseAntigravitySummary(JSONObject("""{"groups":[{"buckets":[
+            {"remainingFraction":0.5,"resetTime":"2024-01-01T01:00:00.123456789+01:00"},
+            {"remainingFraction":0.5,"resetTime":"2024-02-30T00:00:00Z"}]}]}"""))
+        assertEquals(1704067200123L, quota[0].resetsAtEpochMillis)
+        assertEquals(null, quota[1].resetsAtEpochMillis)
+    }
 }

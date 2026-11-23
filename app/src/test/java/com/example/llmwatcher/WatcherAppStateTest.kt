@@ -3,6 +3,7 @@ package com.example.llmwatcher
 import com.example.llmwatcher.model.LlmPlatform
 import com.example.llmwatcher.model.WatcherSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,5 +17,12 @@ class WatcherAppStateTest {
             if (it.platform == LlmPlatform.DEEPSEEK) it.copy(enabled = true) else it
         })
         assertEquals(listOf(LlmPlatform.DEEPSEEK), selected.enabledPlatforms)
+    }
+
+    @Test
+    fun usageDisplayDefaultsToUsed() {
+        val settings = WatcherSettings()
+        assertFalse(settings.showRemaining)
+        assertTrue(settings.copy(showRemaining = true).showRemaining)
     }
 }
