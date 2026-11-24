@@ -6,7 +6,10 @@ import com.example.llmwatcher.model.LlmPlatform
 import com.example.llmwatcher.model.PlatformUsage
 import com.example.llmwatcher.model.UsageSnapshot
 import com.example.llmwatcher.model.fingerprint
+import com.example.llmwatcher.model.UsageIssue
+import com.example.llmwatcher.model.UsageIssueType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class UsageMetricTest {
@@ -22,6 +25,14 @@ class UsageMetricTest {
             listOf(PlatformUsage(LlmPlatform.CODEX, listOf(value), updatedAtLabel = "")), "",
         )
         assertEquals(snapshot(metric).fingerprint(), snapshot(metric.copy(resetsAtEpochMillis = 1704067300000L)).fingerprint())
+    }
+
+    @Test
+    fun fingerprintTracksUsageRatherThanErrors() {
+        val usage = PlatformUsage(LlmPlatform.CODEX, listOf(UsageMetric("Quota", 25.0, 100.0, "%")), updatedAtLabel = "")
+        fun snapshot(value: PlatformUsage) = UsageSnapshot(listOf(value), "")
+        assertEquals(snapshot(usage).fingerprint(), snapshot(usage.copy(issue = UsageIssue(UsageIssueType.NETWORK, "offline"))).fingerprint())
+        assertNotEquals(snapshot(usage).fingerprint(), snapshot(usage.copy(metrics = listOf(usage.metrics[0].copy(used = 26.0)))).fingerprint())
     }
 
     @Test

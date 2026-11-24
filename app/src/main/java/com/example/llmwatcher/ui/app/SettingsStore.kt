@@ -64,6 +64,7 @@ class SettingsStore(context: Context) {
         },
         themePreference = ThemePreference.entries.firstOrNull { it.name == preferences.getString("theme", null) }
             ?: ThemePreference.DARK,
+        burnInProtectionEnabled = preferences.getBoolean("burn_in_protection", true),
         brightness = BrightnessSettings(
             dimBrightness = preferences.getFloat("dim", 0.18f),
             brightBrightness = preferences.getFloat("bright", 0.9f),
@@ -76,6 +77,7 @@ class SettingsStore(context: Context) {
         preferences.edit().apply {
             settings.platforms.forEach { putBoolean("enabled_${it.platform.name}", it.enabled) }
             putString("theme", settings.themePreference.name)
+            putBoolean("burn_in_protection", settings.burnInProtectionEnabled)
             putFloat("dim", settings.brightness.dimBrightness)
             putFloat("bright", settings.brightness.brightBrightness)
             putInt("interval", settings.refreshIntervalSeconds)

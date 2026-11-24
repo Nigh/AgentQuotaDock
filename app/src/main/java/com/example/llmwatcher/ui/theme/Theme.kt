@@ -7,6 +7,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.LocalTonalElevationEnabled
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
@@ -70,6 +71,38 @@ private val OledBlackColorScheme = darkColorScheme(
     surfaceContainerHighest = OledSurface,
 )
 
+private val LightColorScheme = lightColorScheme(
+    primary = LightPrimary,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFD9DE),
+    onPrimaryContainer = Color(0xFF3E0010),
+    secondary = LightSecondary,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF0DBFF),
+    onSecondaryContainer = Color(0xFF290C42),
+    tertiary = LightTertiary,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFA9F2E5),
+    onTertiaryContainer = Color(0xFF00201C),
+    error = LightError,
+    onError = Color.White,
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    background = LightBackground,
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = Color(0xFFD4C2C5),
+    inverseSurface = Color(0xFF362F30),
+    inverseOnSurface = Color(0xFFFBEEEE),
+    inversePrimary = XianiiPrimary,
+    scrim = Color.Black,
+    surfaceContainerHighest = Color(0xFFECE0E0),
+)
+
 @Composable
 fun LLMWatcherTheme(
     themePreference: ThemePreference = ThemePreference.DARK,
@@ -78,6 +111,7 @@ fun LLMWatcherTheme(
     val colorScheme = when (themePreference) {
         ThemePreference.DARK -> DarkColorScheme
         ThemePreference.OLED_BLACK -> OledBlackColorScheme
+        ThemePreference.LIGHT -> LightColorScheme
     }
 
     CompositionLocalProvider(

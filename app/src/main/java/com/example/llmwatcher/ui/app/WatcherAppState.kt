@@ -8,8 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import com.example.llmwatcher.brightness.BrightnessPolicy
-import com.example.llmwatcher.brightness.BrightnessState
 import com.example.llmwatcher.data.RealUsageRepository
 import com.example.llmwatcher.data.UsageRepository
 import com.example.llmwatcher.model.*
@@ -34,7 +32,6 @@ class WatcherAppState(
     var uiState by mutableStateOf(WatcherUiState(settings = store.load()))
         private set
     private var refreshJob: Job? = null
-    private var lastFingerprint: String? = null
     private val tokenMutex = Mutex()
     private var generation = 0
 
@@ -53,16 +50,7 @@ class WatcherAppState(
             try {
                 val snapshot = withContext(Dispatchers.IO) { loadUsage(settings) }
                 if (current != generation) return@launch
-                val fingerprint = snapshot.fingerprint()
-                val brightness = BrightnessPolicy.nextState(
-                    previousFingerprint = lastFingerprint,
-                    currentFingerprint = fingerprint,
-                    previousState = BrightnessState(uiState.isDimmed, uiState.unchangedRefreshes),
-                    settings = uiState.settings.brightness,
-                )
-                lastFingerprint = fingerprint
-                uiState = uiState.copy(usageSnapshot = snapshot, isDimmed = brightness.isDimmed,
-                    unchangedRefreshes = brightness.unchangedRefreshes)
+                uiState = uiState.copy(usageSnapshot = snapshot)
             } finally {
                 if (current == generation) uiState = uiState.copy(isRefreshing = false)
             }
@@ -148,6 +136,7 @@ class WatcherAppState(
 
     fun setThemePreference(value: ThemePreference) { updateSettings { copy(themePreference = value) } }
     fun setShowRemaining(value: Boolean) { updateSettings { copy(showRemaining = value) } }
+    fun setBurnInProtectionEnabled(value: Boolean) { updateSettings { copy(burnInProtectionEnabled = value) } }
     fun setDimBrightness(value: Float) { updateBrightness { it.copy(dimBrightness = value.coerceAtMost(it.brightBrightness)).normalized() } }
     fun setBrightBrightness(value: Float) { updateBrightness { it.copy(brightBrightness = value.coerceAtLeast(it.dimBrightness)).normalized() } }
     fun setRefreshInterval(seconds: Int) { updateSettings { copy(refreshIntervalSeconds = seconds.coerceIn(5, 120)) } }

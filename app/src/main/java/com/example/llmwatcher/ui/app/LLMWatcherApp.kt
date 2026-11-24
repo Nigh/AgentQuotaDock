@@ -56,6 +56,8 @@ fun LLMWatcherApp(
             onLogin = state::openLogin,
             onThemePreferenceChange = state::setThemePreference,
             onShowRemainingChange = state::setShowRemaining,
+            burnInProtectionEnabled = uiState.settings.burnInProtectionEnabled,
+            onBurnInProtectionEnabledChange = state::setBurnInProtectionEnabled,
             onDimBrightnessChange = state::setDimBrightness,
             onBrightBrightnessChange = state::setBrightBrightness,
             onRefreshIntervalChange = state::setRefreshInterval,
@@ -64,6 +66,7 @@ fun LLMWatcherApp(
     } else {
         DashboardScreen(
             uiState = uiState,
+            burnInProtectionEnabled = uiState.settings.burnInProtectionEnabled,
             onOpenSettings = state::openSettings,
             onRefresh = state::refreshUsage,
             modifier = modifier,

@@ -18,11 +18,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,9 +56,12 @@ fun SettingsScreen(
     onShowRemainingChange: (Boolean) -> Unit,
     onDimBrightnessChange: (Float) -> Unit,
     onBrightBrightnessChange: (Float) -> Unit,
+    burnInProtectionEnabled: Boolean,
+    onBurnInProtectionEnabledChange: (Boolean) -> Unit,
     onRefreshIntervalChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedPage by rememberSaveable { mutableStateOf(0) }
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -65,30 +71,62 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             SettingsHeader(onClose = onClose)
-            PlatformSection(
-                platforms = uiState.settings.platforms,
-                onPlatformEnabledChange = onPlatformEnabledChange,
-                onCredentialChange = onCredentialChange,
-                onCredentialTest = onCredentialTest,
-                onLogin = onLogin,
-            )
-            ThemeSection(
-                selected = uiState.settings.themePreference,
-                onThemePreferenceChange = onThemePreferenceChange,
-            )
-            UsageDisplaySection(
-                showRemaining = uiState.settings.showRemaining,
-                onShowRemainingChange = onShowRemainingChange,
-            )
-            BrightnessSection(
-                brightness = uiState.settings.brightness,
-                onDimBrightnessChange = onDimBrightnessChange,
-                onBrightBrightnessChange = onBrightBrightnessChange,
-            )
-            RefreshSection(
-                refreshIntervalSeconds = uiState.settings.refreshIntervalSeconds,
-                onRefreshIntervalChange = onRefreshIntervalChange,
-            )
+            TabRow(selectedTabIndex = selectedPage) {
+                listOf("账号登录", "系统设置").forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedPage == index,
+                        onClick = { selectedPage = index },
+                        text = { Text(title) },
+                    )
+                }
+            }
+            if (selectedPage == 0) {
+                PlatformSection(
+                    platforms = uiState.settings.platforms,
+                    onPlatformEnabledChange = onPlatformEnabledChange,
+                    onCredentialChange = onCredentialChange,
+                    onCredentialTest = onCredentialTest,
+                    onLogin = onLogin,
+                )
+            } else {
+                ThemeSection(
+                    selected = uiState.settings.themePreference,
+                    onThemePreferenceChange = onThemePreferenceChange,
+                )
+                UsageDisplaySection(
+                    showRemaining = uiState.settings.showRemaining,
+                    onShowRemainingChange = onShowRemainingChange,
+                )
+                BrightnessSection(
+                    brightness = uiState.settings.brightness,
+                    onDimBrightnessChange = onDimBrightnessChange,
+                    onBrightBrightnessChange = onBrightBrightnessChange,
+                )
+                SectionCard(title = "防烧屏") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("防烧屏保护", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "定期移动看板内容，降低屏幕烧屏风险。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = burnInProtectionEnabled,
+                            onCheckedChange = onBurnInProtectionEnabledChange,
+                        )
+                    }
+                }
+                RefreshSection(
+                    refreshIntervalSeconds = uiState.settings.refreshIntervalSeconds,
+                    onRefreshIntervalChange = onRefreshIntervalChange,
+                )
+            }
         }
     }
 }
@@ -107,7 +145,7 @@ private fun SettingsHeader(onClose: () -> Unit) {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "平台、凭据、主题、用量显示、亮度与刷新频率",
+                text = "管理账号登录与系统设置",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -314,7 +352,7 @@ private fun BrightnessSection(
             onValueChange = onBrightBrightnessChange,
         )
         Text(
-            text = "连续 ${brightness.dimAfterUnchangedRefreshes} 次数据未变化后会自动调暗。",
+            text = "数据连续 30 分钟未变化后会自动调暗。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
