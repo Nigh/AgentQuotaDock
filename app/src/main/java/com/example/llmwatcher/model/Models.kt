@@ -97,12 +97,12 @@ data class UsageSnapshot(
 enum class ThemePreference(val label: String) {
     DARK("标准深色"),
     OLED_BLACK("纯黑 OLED"),
+    LIGHT("浅色"),
 }
 
 data class BrightnessSettings(
     val dimBrightness: Float = 0.18f,
     val brightBrightness: Float = 0.9f,
-    val dimAfterUnchangedRefreshes: Int = 2,
 ) {
     fun normalized(): BrightnessSettings {
         val dim = dimBrightness.coerceIn(0.05f, 1f)
@@ -110,7 +110,6 @@ data class BrightnessSettings(
         return copy(
             dimBrightness = dim,
             brightBrightness = bright,
-            dimAfterUnchangedRefreshes = dimAfterUnchangedRefreshes.coerceAtLeast(1),
         )
     }
 }
@@ -126,6 +125,7 @@ data class WatcherSettings(
     val platforms: List<PlatformSettings> = LlmPlatform.entries.map { PlatformSettings(it) },
     val themePreference: ThemePreference = ThemePreference.DARK,
     val brightness: BrightnessSettings = BrightnessSettings(),
+    val burnInProtectionEnabled: Boolean = true,
     val refreshIntervalSeconds: Int = 15,
     val showRemaining: Boolean = false,
 ) {
@@ -139,6 +139,4 @@ data class WatcherUiState(
     val isSettingsOpen: Boolean = false,
     val loginPlatform: LlmPlatform? = null,
     val isRefreshing: Boolean = false,
-    val isDimmed: Boolean = false,
-    val unchangedRefreshes: Int = 0,
 )

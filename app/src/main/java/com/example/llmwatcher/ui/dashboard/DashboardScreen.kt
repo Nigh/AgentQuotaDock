@@ -2,6 +2,7 @@ package com.example.llmwatcher.ui.dashboard
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -48,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +62,8 @@ import com.example.llmwatcher.model.UsageLevel
 import com.example.llmwatcher.model.UsageMetric
 import com.example.llmwatcher.model.ThemePreference
 import com.example.llmwatcher.model.WatcherUiState
-import com.example.llmwatcher.ui.theme.XianiiError
+import com.example.llmwatcher.ui.theme.LightSuccess
+import com.example.llmwatcher.ui.theme.LightWarning
 import com.example.llmwatcher.ui.theme.XianiiSuccess
 import com.example.llmwatcher.ui.theme.XianiiWarning
 import java.text.SimpleDateFormat
@@ -73,6 +77,7 @@ fun DashboardScreen(
     uiState: WatcherUiState,
     onOpenSettings: () -> Unit,
     onRefresh: () -> Unit,
+    burnInProtectionEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val oled = uiState.settings.themePreference == ThemePreference.OLED_BLACK
@@ -82,9 +87,9 @@ fun DashboardScreen(
     val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     Surface(modifier = modifier.fillMaxSize()) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val driftMargin = if (oled) minOf(24, (maxHeight.value / 10).toInt(), (maxWidth.value / 10).toInt()) else 0
-            LaunchedEffect(oled, driftMargin) {
-                if (oled && driftMargin > 0) {
+            val driftMargin = if (burnInProtectionEnabled) minOf(24, (maxHeight.value / 10).toInt(), (maxWidth.value / 10).toInt()) else 0
+            LaunchedEffect(burnInProtectionEnabled, driftMargin) {
+                if (burnInProtectionEnabled && driftMargin > 0) {
                     while (true) {
                         val half = (driftMargin + 1) / 2
                         driftX = if (driftX > 0) Random.nextInt(-driftMargin, -half + 1) else Random.nextInt(half, driftMargin + 1)
@@ -96,10 +101,20 @@ fun DashboardScreen(
                     driftY = 0
                 }
             }
+            val offsetX by animateDpAsState(
+                targetValue = driftX.coerceIn(-driftMargin, driftMargin).dp,
+                animationSpec = tween(600),
+                label = "burn-in horizontal offset",
+            )
+            val offsetY by animateDpAsState(
+                targetValue = driftY.coerceIn(-driftMargin, driftMargin).dp,
+                animationSpec = tween(600),
+                label = "burn-in vertical offset",
+            )
             Box(
                 modifier = Modifier.fillMaxSize()
                     .padding(driftMargin.dp)
-                    .offset(driftX.coerceIn(-driftMargin, driftMargin).dp, driftY.coerceIn(-driftMargin, driftMargin).dp),
+                    .offset(offsetX, offsetY),
             ) {
             val enabled = uiState.settings.platforms
                 .filter { it.enabled && it.credential.isNotBlank() }
@@ -197,6 +212,15 @@ private fun PlatformUsagePage(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val flash = remember(usage.platform) { Animatable(0f) }
+    var previousMetrics by remember(usage.platform) { mutableStateOf(usage.metrics) }
+    LaunchedEffect(usage.metrics) {
+        if (previousMetrics != usage.metrics) {
+            previousMetrics = usage.metrics
+            flash.snapTo(0.4f)
+            flash.animateTo(0f, animationSpec = tween(700))
+        }
+    }
     BoxWithConstraints(modifier = modifier) {
         val compact = maxHeight < 320.dp
         Box(
@@ -212,7 +236,13 @@ private fun PlatformUsagePage(
                 .fillMaxHeight()
                 .padding(8.dp)
                 .then(if (oled) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CardDefaults.elevatedShape) else Modifier),
-            colors = if (oled) CardDefaults.elevatedCardColors(containerColor = Color.Black) else CardDefaults.elevatedCardColors(),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = lerp(
+                    if (oled) Color.Black else CardDefaults.elevatedCardColors().containerColor,
+                    MaterialTheme.colorScheme.primary,
+                    flash.value,
+                ),
+            ),
             elevation = if (oled) CardDefaults.elevatedCardElevation(defaultElevation = 0.dp) else CardDefaults.elevatedCardElevation(),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -458,10 +488,11 @@ private fun PageIndicator(
 
 @Composable
 private fun progressColorFor(level: UsageLevel): Color {
+    val light = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     return when (level) {
-        UsageLevel.HEALTHY -> XianiiSuccess   // #7FC08C
-        UsageLevel.WARNING -> XianiiWarning   // #EEBC4A
-        UsageLevel.CRITICAL -> XianiiError    // #FA6863
+        UsageLevel.HEALTHY -> if (light) LightSuccess else XianiiSuccess
+        UsageLevel.WARNING -> if (light) LightWarning else XianiiWarning
+        UsageLevel.CRITICAL -> MaterialTheme.colorScheme.error
     }
 }
 
